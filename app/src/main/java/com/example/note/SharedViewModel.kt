@@ -8,7 +8,8 @@ import java.util.*
 
 class SharedViewModel:ViewModel() {
     private var _data = MutableLiveData("")
-    private var _reminder = MutableLiveData("Установить дату")
+    private var _reminderDate = MutableLiveData("")
+    private var _reminderTime = MutableLiveData("")
     private var _calendar = MutableLiveData<Calendar>()
 
     private var _nameContact = MutableLiveData("")
@@ -21,14 +22,18 @@ class SharedViewModel:ViewModel() {
 
 
     val data: LiveData<String> = _data
-    val reminder: MutableLiveData<String> = _reminder
+    val reminderDate: MutableLiveData<String> = _reminderDate
+    val reminderTime: MutableLiveData<String> = _reminderTime
     val save_calendar: LiveData<Calendar> = _calendar
 
     fun saveTitle(newCountry:String){
         _data.value = newCountry
     }
     fun saveDate(dateReminder: String){
-        _reminder.value = dateReminder
+        _reminderDate.value = dateReminder
+    }
+    fun saveTime(timeReminder:String){
+        _reminderTime.value = timeReminder
     }
     fun saveCalendar(save_calendar:Calendar){
         _calendar.value = save_calendar
@@ -47,7 +52,8 @@ class SharedViewModel:ViewModel() {
         _data.value = ""
     }
     fun clearDate(){
-        _reminder.value = "Установить дату"
+        _reminderDate.value = ""
+        _reminderTime.value = ""
     }
     fun clearContact(){
         _nameContact.value = ""

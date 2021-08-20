@@ -7,6 +7,7 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.view.isInvisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -39,7 +40,9 @@ class CreateNoteFragment : Fragment(){
     private lateinit var civ_image:CircleImageView
     private lateinit var cv_setreminder:CardView
     private lateinit var tv_date:TextView
+    private lateinit var tv_time:TextView
     private lateinit var cardView:CardView
+    private lateinit var tv_addContact:TextView
 
     lateinit var calendar: Calendar
 
@@ -49,7 +52,8 @@ class CreateNoteFragment : Fragment(){
     lateinit var editText: EditText
 
 
-    val DATE_TIME_COMPONENT_FORMAT = "yyyy-MM-dd HH:mm:ss"
+    val DATE_COMPONENT_FORMAT = "dd-MM-yyyy"
+    val TIME_COMPONENT_FORMAT = "HH:mm:ss"
 
 
     override fun onCreateView(
@@ -59,8 +63,11 @@ class CreateNoteFragment : Fragment(){
         sharedViewModel.data.observe(viewLifecycleOwner, { data ->
             view?.findViewById<EditText>(R.id.text)?.setText(data)
         })
-        sharedViewModel.reminder.observe(viewLifecycleOwner, { reminder ->
-            view?.findViewById<TextView>(R.id.tv_date)?.text = reminder
+        sharedViewModel.reminderDate.observe(viewLifecycleOwner, { reminderDate ->
+            view?.findViewById<TextView>(R.id.tv_date)?.text = reminderDate
+        })
+        sharedViewModel.reminderTime.observe(viewLifecycleOwner, { reminderTime ->
+            view?.findViewById<TextView>(R.id.tv_time)?.text = reminderTime
         })
         sharedViewModel.save_calendar.observe(viewLifecycleOwner, { save_calendar ->
             calendar = save_calendar
@@ -90,13 +97,16 @@ class CreateNoteFragment : Fragment(){
         civ_image = view.findViewById(R.id.civ_image)
         cv_setreminder = view.findViewById(R.id.cv_setreminder)
         tv_date = view.findViewById(R.id.tv_date)
+        tv_time = view.findViewById(R.id.tv_time)
         cardView = view.findViewById<CardView>(R.id.cardview)
-
+        tv_addContact = view.findViewById(R.id.tv_addContact)
+        if (arguments != null || sharedViewModel.nameContact.value?.length != 0){
+            tv_addContact.visibility = View.INVISIBLE
+        }
         if (arguments != null) {
 //            tv_name.text = arguments?.getString("Name").toString()
 //            tv_email.text = arguments?.getString("Email").toString()
 //            civ_image.downloadAndSetImage(arguments?.getString("Image").toString())
-
             sharedViewModel.saveNameContact(arguments?.getString("Name").toString())
             sharedViewModel.saveEmailContact(arguments?.getString("Email").toString())
             sharedViewModel.saveImageContact(arguments?.getString("Image").toString())
@@ -107,6 +117,7 @@ class CreateNoteFragment : Fragment(){
                 sharedViewModel.saveCalendar(calendar)
             }
             sharedViewModel.saveDate(tv_date.text.toString())
+            sharedViewModel.saveTime(tv_time.text.toString())
             sharedViewModel.saveTitle(editText.text.toString())
             findNavController().navigate(R.id.action_createNoteFragment_to_choosePersonFragment)
         }
@@ -139,8 +150,10 @@ class CreateNoteFragment : Fragment(){
                 calendar.set(Calendar.MINUTE, materialTimePicker.minute)
                 calendar.set(Calendar.HOUR_OF_DAY, materialTimePicker.hour)
                 val date = calendar.time
-                val format = SimpleDateFormat(DATE_TIME_COMPONENT_FORMAT)
-                tv_date.setText(format.format(date))
+                val format_date = SimpleDateFormat(DATE_COMPONENT_FORMAT)
+                val format_time = SimpleDateFormat(TIME_COMPONENT_FORMAT)
+                tv_date.text = format_date.format(date)
+                tv_time.text = format_time.format(date)
             }
         }
     }

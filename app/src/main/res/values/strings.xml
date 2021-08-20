@@ -6,4 +6,6 @@
     <string name="set_reminder">Установить дату</string>
     <string name="add_contact">Добавить контакт</string>
     <string name="completed">Выполнено</string>
+    <string name="selectedDate">Выбранная дата:</string>
+    <string name="selectedTime">Выбранное время:</string>
 </resources>
