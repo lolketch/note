@@ -6,6 +6,7 @@ import android.view.*
 import android.widget.EditText
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -19,6 +20,9 @@ import com.example.note.activity.MainActivity
 import com.example.note.downloadAndSetImage
 import com.example.note.model.Note
 import com.example.note.workmanager.RemainderWorker
+import com.google.android.material.datepicker.CalendarConstraints
+import com.google.android.material.datepicker.CalendarConstraints.DateValidator
+import com.google.android.material.datepicker.DateValidatorPointForward
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -56,10 +60,19 @@ class CreateNoteFragment : Fragment(){
             view?.findViewById<EditText>(R.id.text)?.setText(data)
         })
         sharedViewModel.reminder.observe(viewLifecycleOwner, { reminder ->
-            view?.findViewById<TextView>(R.id.tv_date)?.setText(reminder)
+            view?.findViewById<TextView>(R.id.tv_date)?.text = reminder
         })
         sharedViewModel.save_calendar.observe(viewLifecycleOwner, { save_calendar ->
             calendar = save_calendar
+        })
+        sharedViewModel.nameContact.observe(viewLifecycleOwner,{ nameContact ->
+            view?.findViewById<TextView>(R.id.tv_name)?.text = nameContact
+        })
+        sharedViewModel.emailContact.observe(viewLifecycleOwner,{ emailContact ->
+            view?.findViewById<TextView>(R.id.tv_email)?.text = emailContact
+        })
+        sharedViewModel.imageContact.observe(viewLifecycleOwner,{ imageContact ->
+            view?.findViewById<CircleImageView>(R.id.civ_image)?.downloadAndSetImage(imageContact)
         })
 
         // Inflate the layout for this fragment
@@ -70,7 +83,6 @@ class CreateNoteFragment : Fragment(){
     @SuppressLint("ResourceType")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        calendar = Calendar.getInstance()
         note = Note()
         editText = view.findViewById(R.id.text)
         tv_name = view.findViewById(R.id.tv_name)
@@ -79,6 +91,16 @@ class CreateNoteFragment : Fragment(){
         cv_setreminder = view.findViewById(R.id.cv_setreminder)
         tv_date = view.findViewById(R.id.tv_date)
         cardView = view.findViewById<CardView>(R.id.cardview)
+
+        if (arguments != null) {
+//            tv_name.text = arguments?.getString("Name").toString()
+//            tv_email.text = arguments?.getString("Email").toString()
+//            civ_image.downloadAndSetImage(arguments?.getString("Image").toString())
+
+            sharedViewModel.saveNameContact(arguments?.getString("Name").toString())
+            sharedViewModel.saveEmailContact(arguments?.getString("Email").toString())
+            sharedViewModel.saveImageContact(arguments?.getString("Image").toString())
+        }
 
         cardView.setOnClickListener {
             if (this::calendar.isInitialized){
@@ -89,14 +111,18 @@ class CreateNoteFragment : Fragment(){
             findNavController().navigate(R.id.action_createNoteFragment_to_choosePersonFragment)
         }
         cv_setreminder.setOnClickListener {
-
+            calendar = Calendar.getInstance()
+            val constraintBuilder = CalendarConstraints.Builder()
+                    .setValidator(DateValidatorPointForward.now())
+                    .build()
             val materialTimePicker = MaterialTimePicker.Builder()
                     .setTimeFormat(TimeFormat.CLOCK_24H)
-                    .setHour(12)
-                    .setMinute(0)
+                    .setHour(calendar.get(Calendar.HOUR_OF_DAY))
+                    .setMinute(calendar.get(Calendar.MINUTE))
                     .setTitleText("Установите дату")
                     .build()
             val materialDatePicker = MaterialDatePicker.Builder.datePicker()
+                    .setCalendarConstraints(constraintBuilder)
                     .setTitleText("Выберите дату")
                     .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
                     .build()
@@ -116,12 +142,6 @@ class CreateNoteFragment : Fragment(){
                 val format = SimpleDateFormat(DATE_TIME_COMPONENT_FORMAT)
                 tv_date.setText(format.format(date))
             }
-        }
-
-        if (arguments != null) {
-            tv_name.text = arguments?.getString("Name").toString()
-            tv_email.text = arguments?.getString("Email").toString()
-            civ_image.downloadAndSetImage(arguments?.getString("Image").toString())
         }
     }
 
@@ -145,17 +165,22 @@ class CreateNoteFragment : Fragment(){
                     note.text = editText.text.toString()
                     note.done = false
                     note.timestamp = System.currentTimeMillis()
-                    note.name_person = arguments?.getString("Name").toString()
-                    note.email_person = arguments?.getString("Email").toString()
-                    note.image_person = arguments?.getString("Image").toString()
+                    if (sharedViewModel.nameContact.value?.length!! > 0 &&
+                            sharedViewModel.emailContact.value?.length!! > 0) {
+                        note.name_person = sharedViewModel.nameContact.value
+                        note.email_person = sharedViewModel.emailContact.value
+                    }
+                    note.image_person = sharedViewModel.imageContact.value
                     val id = App.instance?.noteDao?.insert(note)!!
                     setRemainderNotification(id)
                     sharedViewModel.clearTitle()
                     sharedViewModel.clearDate()
+                    sharedViewModel.clearContact()
                     findNavController().navigate(R.id.action_createNoteFragment_to_notesFragment)
                 }
             }
             android.R.id.home -> {
+                sharedViewModel.clearContact()
                 sharedViewModel.clearDate()
                 sharedViewModel.clearTitle()
                 findNavController().navigate(R.id.action_createNoteFragment_to_notesFragment)
@@ -165,16 +190,17 @@ class CreateNoteFragment : Fragment(){
     }
     private fun setRemainderNotification(id: Long) {
         val data = Data.Builder()
-            .putLong("id", id)
-            .build()
-        if (this::calendar.isInitialized) {
+                .putLong("id", id)
+                .build()
+        if (this::calendar.isInitialized && (calendar.timeInMillis > 0)) {
             val timeDiff = calendar.timeInMillis - System.currentTimeMillis() - 3600000
             App.instance?.noteDao?.updateReminderDate(id, calendar.timeInMillis)
             val dailyWorkRequest = OneTimeWorkRequest.Builder(RemainderWorker::class.java)
-                .setInputData(data)
-                .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)
-                .build()
+                    .setInputData(data)
+                    .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)
+                    .build()
             WorkManager.getInstance(requireContext()).enqueue(dailyWorkRequest)
+            calendar.clear()
         }
     }
 }

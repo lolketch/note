@@ -88,8 +88,8 @@ class NoteAdapter: RecyclerView.Adapter<NoteAdapter.NoteViewHolder?>() {
         fun bind(reminder: Note) {
             this.reminder = reminder
             if (reminder.date_reminder > 0) dateTextView.text = "Дата: " + formatter.format(reminder.date_reminder)
-            if (reminder.name_person != "null") nameText.text = "Name: " + reminder.name_person else nameText.text = "Контакт не выбран"
-            if (reminder.email_person != "null") emailText.text = "Email: " + reminder.email_person else emailText.text = ""
+            if (reminder.name_person != null) nameText.text = "Name: " + reminder.name_person else nameText.text = "Контакт не выбран"
+            if (reminder.email_person != null) emailText.text = "Email: " + reminder.email_person else emailText.text = ""
             reminderText.text = reminder.text
             imagePerson.downloadAndSetImage(reminder.image_person!!)
             updateStrokeOut()
